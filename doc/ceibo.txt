@@ -1,0 +1,228 @@
+*ceibo.txt*  Git diff reviewer — annotate changes, submit to AI coding assistants
+
+==============================================================================
+CONTENTS                                                        *ceibo-contents*
+
+  1. Introduction      |ceibo-intro|
+  2. Setup             |ceibo-setup|
+  3. Commands          |ceibo-commands|
+  4. Keymaps           |ceibo-keymaps|
+  5. Comment scopes    |ceibo-scopes|
+  6. Highlights        |ceibo-highlights|
+  7. Session           |ceibo-session|
+  8. Export            |ceibo-export|
+
+==============================================================================
+1. INTRODUCTION                                                    *ceibo-intro*
+
+ceibo.nvim lets you review git diffs, annotate lines with typed comments
+(ISSUE / SUGGESTION / NOTE / PRAISE), and export a structured Markdown review
+to be pasted into — or automatically consumed by — an AI coding assistant.
+
+Features:
+  - Unified and side-by-side split diff views
+  - Three comment scopes: line (with optional visual range), file, general
+  - Collapse reviewed files (press r) to keep the diff tidy
+  - File list panel with trie-merged directory paths
+  - Comment list float (jump to any comment from one place)
+  - Persistent bottom statusbar showing available actions
+  - Auto-save session to stdpath("data")/ceibo/<repo>/session.json
+  - Untracked (never-staged) files are included in the diff automatically
+
+==============================================================================
+2. SETUP                                                           *ceibo-setup*
+
+Requires Neovim 0.10+.
+
+Minimal (lazy.nvim): >
+  {
+    "you/ceibo.nvim",
+    cmd  = { "Ceibo" },
+    opts = {},
+  }
+<
+Full options with defaults: >
+  require("ceibo").setup({
+    -- Whether to register the default buffer-local keymaps.
+    set_default_keymaps = true,
+
+    -- Default diff view mode: "unified" | "split"
+    view_mode = "unified",
+
+    -- Git ref to diff against. nil = working tree vs HEAD.
+    base_ref = nil,
+
+    -- Comment type definitions.
+    -- `hl` is optional; defaults to "CeiboComment<Name>".
+    types = {
+      { name = "ISSUE",      description = "bug or problem — fix it"                      },
+      { name = "SUGGESTION", description = "improvement to discuss — ask before changing"  },
+      { name = "NOTE",       description = "informational — no action needed"              },
+      { name = "PRAISE",     description = "positive feedback — no action needed"          },
+    },
+
+    layout = {
+      file_list_width = 30,   -- width of the left file panel (columns)
+    },
+
+    -- Keymaps applied to the diff window. Set any value to false to disable
+    -- that specific binding. Has no effect when set_default_keymaps = false.
+    keymaps = {
+      add_comment    = "c",
+      delete_comment = "d",
+      yank           = "y",
+      submit         = "s",
+      next_hunk      = "]h",
+      prev_hunk      = "[h",
+      next_file      = "]f",
+      prev_file      = "[f",
+      mark_reviewed  = "r",
+      close          = "q",
+    },
+
+    highlights = {
+      -- diff line backgrounds
+      CeiboAdd               = { link = "DiffAdd"         },
+      CeiboDel               = { link = "DiffDelete"      },
+      CeiboHdr               = { link = "DiffText"        },
+      -- file header bar
+      CeiboFileHeader        = { link = "Title"            },
+      -- inline comment type labels
+      CeiboCommentIssue      = { link = "DiagnosticError"  },
+      CeiboCommentSuggestion = { link = "DiagnosticWarn"   },
+      CeiboCommentNote       = { link = "DiagnosticInfo"   },
+      CeiboCommentPraise     = { link = "DiagnosticOk"     },
+      -- comment body text
+      CeiboCommentText       = { link = "Comment"          },
+      -- reviewed ✓ marker in the file list
+      CeiboReviewed          = { link = "DiagnosticOk"     },
+      -- background highlight for visual range comments
+      CeiboRangeHL           = { link = "Visual"           },
+      -- collapsed file placeholder line
+      CeiboCollapsed         = { link = "Comment"          },
+      -- directory rows in the file tree
+      CeiboDir               = { link = "Directory"        },
+    },
+  })
+<
+==============================================================================
+3. COMMANDS                                                     *ceibo-commands*
+
+:Ceibo                 Diff vs HEAD (default)
+:Ceibo diff=HEAD       Same, explicit
+:Ceibo diff=<ref>      Diff vs any git ref (branch, tag, SHA, HEAD~3 …)
+:Ceibo diff=staged     Staged changes only
+:Ceibo view=unified    Open in unified diff view
+:Ceibo view=split      Open in side-by-side split view
+:Ceibo list            Show all comments in a floating list
+
+Tab-completion is provided for all arguments.
+
+==============================================================================
+4. KEYMAPS                                                      *ceibo-keymaps*
+
+All keymaps are buffer-local to the diff window.
+
+  c            Add / edit comment at cursor line
+  c (visual)   Add range comment over visual selection
+  d            Delete comment at cursor (file-scoped if on file header)
+  X            Remove all comments
+  y            Yank review Markdown to clipboard
+  s            Submit review → stdpath("data")/ceibo/<repo>/review.md, exit nvim
+  ]h / [h      Next / prev hunk
+  ]f / [f      Next / prev file
+  r            Toggle file reviewed ✓ + collapse/expand
+  gf           Open file under cursor in a new tab
+  <leader>cl   Show all comments in a floating list
+  W            Toggle line wrap
+  + / -        Increase / decrease context lines (default: 3)
+  q            Close review tab
+  ?            Show help float
+
+Inside the comment prompt:
+  <Tab>        Cycle comment type  (ISSUE → SUGGESTION → NOTE → PRAISE)
+  <S-Tab>      Cycle scope (line → file → general), loads existing text
+  <C-s>        Save comment
+  <Esc> / q    Cancel
+
+In the file list panel:
+  <CR>         Jump to file in diff view
+  r            Toggle file reviewed + collapse/expand
+  gf           Open file in new tab
+  q            Close review tab
+
+==============================================================================
+5. COMMENT SCOPES                                               *ceibo-scopes*
+
+Each comment has a scope, cycled with <S-Tab> inside the prompt:
+
+  line     Anchored to a specific line (or visual range) in a file.
+           Range comments highlight the covered lines with CeiboRangeHL.
+  file     One note per file; rendered on the file header line.
+  general  One note for the whole review; exported as "General Notes".
+
+Comment virtual text is rendered at end-of-line: >
+  ▶ [TYPE][scope_label]  [range_label] <text>
+<
+==============================================================================
+6. HIGHLIGHTS                                                  *ceibo-highlights*
+
+All highlight groups can be overridden via the `highlights` key in setup()
+(see |ceibo-setup|). Highlights are re-applied on every `ColorScheme` event so
+they stay correct after a colorscheme switch.
+
+  CeiboAdd               Added lines (+)                  → DiffAdd
+  CeiboDel               Removed lines (-)                → DiffDelete
+  CeiboHdr               Hunk header lines (@@)           → DiffText
+  CeiboFileHeader        File header bar                  → Title
+  CeiboCommentIssue      ISSUE label                      → DiagnosticError
+  CeiboCommentSuggestion SUGGESTION label                 → DiagnosticWarn
+  CeiboCommentNote       NOTE label                       → DiagnosticInfo
+  CeiboCommentPraise     PRAISE label                     → DiagnosticOk
+  CeiboCommentText       Comment body text                → Comment
+  CeiboReviewed          ✓ marker in file list            → DiagnosticOk
+  CeiboRangeHL           Visual range comment background  → Visual
+  CeiboCollapsed         Collapsed file placeholder       → Comment
+  CeiboDir               Directory rows in file tree      → Directory
+
+Custom comment types automatically get a highlight group named
+"CeiboComment<Name>" (e.g. "CeiboCommentMYTYPE") unless you provide an `hl`
+field explicitly in the type definition.
+
+==============================================================================
+7. SESSION                                                       *ceibo-session*
+
+ceibo.nvim auto-saves your review session so you can resume after closing
+Neovim. The session file is stored at: >
+  stdpath("data")/ceibo/<repo-basename>-<6hex>/session.json
+<
+The repo key is `basename(root) + "-" + djb2_hash(full_path)`, which is
+collision-safe across same-named repositories on different paths.
+
+  - Saved with a 200ms debounce on every comment add / delete.
+  - Reviewed and collapsed state is also persisted.
+  - Restored automatically when you run `:Ceibo` again.
+  - Deleted on submit (`s`).
+
+==============================================================================
+8. EXPORT                                                         *ceibo-export*
+
+`s` (or `:Ceibo submit`) writes the review to: >
+  stdpath("data")/ceibo/<repo-basename>-<6hex>/review.md
+<
+The file contains:
+  - Format legend and type / scope definitions
+  - Flat comment list under `## Comments`:
+      [GENERAL] [TYPE] (no location) >> <text>
+      [FILE]    [TYPE] <file> >> <text>
+      [LINE]    [TYPE] <file>:<line> >> <text>
+        followed by a ```diff``` context snippet (±2 lines) when available
+  - "_No comments._" if there are none
+
+`y` yanks the same Markdown to both the `+` (system clipboard) and `"` registers
+without writing a file or exiting.
+
+After submit, `session.json` is deleted and Neovim exits.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
