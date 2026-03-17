@@ -118,11 +118,11 @@ function M.get_diff_context(file, target_ln, radius)
         -- skip
       elseif dl.type == "del" then
         if math.abs(last_new_ln - target_ln) <= radius then
-          table.insert(result, "-" .. (dl.content or ""))
+          table.insert(result, dl.old_ln .. " -" .. (dl.content or ""))
         end
       elseif dl.new_ln and math.abs(dl.new_ln - target_ln) <= radius then
         local prefix = dl.type == "add" and "+" or " "
-        table.insert(result, prefix .. (dl.content or ""))
+        table.insert(result, dl.new_ln .. " " .. prefix .. (dl.content or ""))
       end
     end
   end
