@@ -68,7 +68,7 @@ function M.attach_diff(diff_bufnr, diff_win, fl_bufnr, fl_win)
   local session = require("ceibo.session")
   local comments = require("ceibo.comments")
   local layout = require("ceibo.ui.layout")
-  local export = require("ceibo.export")
+  local export = require("ceibo.diff_export")
   local dv = require("ceibo.ui.diff_view")
 
   -- normal mode: add comment at cursor line

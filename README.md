@@ -1,15 +1,16 @@
 # Ceibo
 
-A Neovim plugin for reviewing git diffs and generating structured code review comments to feed back into AI coding assistants (Claude Code, OpenCode, etc.).
+A Neovim plugin for reviewing git diffs and annotating codebases — generates structured Markdown reports to feed back into AI coding assistants (Claude Code, OpenCode, etc.).
 
 ## What it does
 
-- Shows a navigable git diff (all files, including new and deleted)
-- Lets you annotate individual lines or visual ranges with typed comments
-- Lets you also annotate files or the whole review with general comments
-- Exports a structured Markdown review — yank it to clipboard with `y`
+Two independent flows:
 
-## Workflow
+**Diff review** — open a navigable git diff, annotate lines with typed comments, export a structured review to paste into your AI assistant.
+
+**Codebase annotation** — comment on any file at any time (no diff needed), browse and delete annotations from a floating list, export a separate report.
+
+## Diff review workflow
 
 ```
 ╔══════════════════╗         ╔══════════════════════════════╗
@@ -22,16 +23,28 @@ A Neovim plugin for reviewing git diffs and generating structured code review co
 ║                  ║         ║  │   bar.lua│     ▶ [ISSUE]│ ║
 ║                  ║         ║  └──────────┴──────────────┘ ║
 ║                  ║         ║  3. annotate, comment        ║
-║  5. paste review ║◀──────y─║  4. press y to  yanks review ║
+║  5. paste review ║◀──────y─║  4. press y to yank review  ║
 ║     fix issues   ║         ║     to clipboard             ║
 ╚══════════════════╝         ╚══════════════════════════════╝
 ```
 
-1. Run your AI assistant (Claude Code, OpenCode, etc.) and let it make changes
-2. Open Neovim and run `:Ceibo`
-3. Navigate the diff, add comments, mark files reviewed
-4. Press `y` to yank the full review Markdown to clipboard
-5. Go back to the AI assistant and paste — ask it to address all ISSUE and SUGGESTION comments
+1. Run your AI assistant and let it make changes
+2. Run `:Ceibo` — navigate the diff, add comments, mark files reviewed
+3. Press `y` to yank the review Markdown to clipboard
+4. Paste into the AI assistant and ask it to address all ISSUE and SUGGESTION comments
+
+## Annotation workflow
+
+Annotate any file in your codebase at any point during development:
+
+```
+:Ceibo annotate comment   add / edit annotation at cursor (or visual range)
+:Ceibo annotate delete    delete annotation at cursor (line-scoped)
+:Ceibo annotate list      browse all annotations — <CR> jumps, d deletes
+:Ceibo annotate report    export annotations.md + yank to clipboard
+```
+
+Annotations appear as virtual text in real file buffers and persist across sessions.
 
 ## Requirements
 
@@ -57,6 +70,7 @@ require("ceibo").setup({})
 
 ## Usage
 
+**Diff review:**
 ```
 :Ceibo                 diff vs HEAD (default)
 :Ceibo diff=HEAD       same, explicit
@@ -65,6 +79,14 @@ require("ceibo").setup({})
 :Ceibo view=unified    switch to unified diff view
 :Ceibo view=split      switch to side-by-side split view
 :Ceibo list            show all comments in a floating list
+```
+
+**Annotations:**
+```
+:Ceibo annotate comment   add / edit annotation at cursor (or visual range)
+:Ceibo annotate delete    delete annotation at cursor (line-scoped)
+:Ceibo annotate list      browse all annotations — <CR> jumps, d deletes
+:Ceibo annotate report    export annotations.md + yank to clipboard
 ```
 
 ## Configuration
@@ -128,9 +150,9 @@ require("ceibo").setup({
 
 ## Session persistence
 
-Comments and reviewed flags are auto-saved to
-`stdpath("data")/ceibo/<repo>/session.json` after every change. Reopening
-`:Ceibo` restores them automatically. The session file is cleared on submit.
+Diff review comments and reviewed flags are auto-saved to `stdpath("data")/ceibo/<repo>/session.json` after every change and restored automatically on next `:Ceibo`. The session file is cleared on submit.
+
+Annotations are auto-saved to `annotations.json` in the same directory and rendered as virtual text on every `BufEnter` for files that have annotations.
 
 ## Acknowledgments
 

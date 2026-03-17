@@ -1,4 +1,4 @@
-*ceibo.txt*  Git diff reviewer — annotate changes, submit to AI coding assistants
+*ceibo.txt*  Git diff reviewer and codebase annotator
 
 ==============================================================================
 CONTENTS                                                        *ceibo-contents*
@@ -11,13 +11,22 @@ CONTENTS                                                        *ceibo-contents*
   6. Highlights        |ceibo-highlights|
   7. Session           |ceibo-session|
   8. Export            |ceibo-export|
+  9. Annotations       |ceibo-annotations|
 
 ==============================================================================
 1. INTRODUCTION                                                    *ceibo-intro*
 
-ceibo.nvim lets you review git diffs, annotate lines with typed comments
-(ISSUE / SUGGESTION / NOTE / PRAISE), and export a structured Markdown review
-to be pasted into — or automatically consumed by — an AI coding assistant.
+ceibo.nvim has two independent flows:
+
+Diff review~
+  Review git diffs, annotate lines with typed comments (ISSUE / SUGGESTION /
+  NOTE / PRAISE), and export a structured Markdown review to be pasted into —
+  or automatically consumed by — an AI coding assistant.
+
+Annotation~
+  Annotate any file in the codebase at any time, independently of git. Comments
+  are shown as virtual text in real file buffers, persisted across sessions, and
+  exportable as a separate Markdown report.
 
 Features:
   - Unified and side-by-side split diff views
@@ -28,6 +37,7 @@ Features:
   - Persistent bottom statusbar showing available actions
   - Auto-save session to stdpath("data")/ceibo/<repo>/session.json
   - Untracked (never-staged) files are included in the diff automatically
+  - Always-available annotation commands (no diff session required)
 
 ==============================================================================
 2. SETUP                                                           *ceibo-setup*
@@ -108,13 +118,28 @@ Full options with defaults: >
 ==============================================================================
 3. COMMANDS                                                     *ceibo-commands*
 
+Diff review commands~
+
 :Ceibo                 Diff vs HEAD (default)
 :Ceibo diff=HEAD       Same, explicit
 :Ceibo diff=<ref>      Diff vs any git ref (branch, tag, SHA, HEAD~3 …)
 :Ceibo diff=staged     Staged changes only
 :Ceibo view=unified    Open in unified diff view
 :Ceibo view=split      Open in side-by-side split view
-:Ceibo list            Show all comments in a floating list
+:Ceibo list            Show all diff comments in a floating list
+
+Annotation commands~                                      *ceibo-annotate-cmds*
+
+These work at any time in any buffer, no diff session required.
+
+:Ceibo annotate comment   Add / edit annotation at cursor line.
+                          Also works as a range command: :'<,'>Ceibo annotate comment
+:Ceibo annotate delete    Delete line-scoped annotation at cursor.
+:Ceibo annotate list      Show all annotations in a floating list.
+                          <CR> jumps to the file and line; d deletes.
+:Ceibo annotate report    Build annotation report, write to
+                          stdpath("data")/ceibo/<repo>/annotations.md
+                          and yank to clipboard.
 
 Tab-completion is provided for all arguments.
 
@@ -223,6 +248,53 @@ The file contains:
 without writing a file or exiting.
 
 After submit, `session.json` is deleted and Neovim exits.
+
+==============================================================================
+9. ANNOTATIONS                                               *ceibo-annotations*
+
+The annotation flow lets you comment on any file in the codebase at any time,
+independently of git diffs. Annotations are stored separately from diff review
+comments and generate a distinct report.
+
+Usage~
+  1. Open any file and position the cursor on the line you want to annotate.
+  2. Run `:Ceibo annotate comment` (or visually select a range first).
+  3. The comment prompt opens — same UI as the diff review prompt:
+       <Tab>    cycle type   (ISSUE → SUGGESTION → NOTE → PRAISE …)
+       <S-Tab>  cycle scope  (line → file → general)
+       <C-s>    save
+       <Esc>    cancel
+  4. The annotation appears as virtual text at end-of-line.
+  5. Use `:Ceibo annotate list` to browse and delete annotations.
+  6. Use `:Ceibo annotate report` to export.
+
+Persistence~
+  Annotations are auto-saved (200ms debounce) to: >
+    stdpath("data")/ceibo/<repo-basename>-<6hex>/annotations.json
+<
+  On every `BufEnter`, ceibo re-renders virtual text for that file if any
+  annotations exist, so they are always visible without reopening a diff.
+
+Report format~
+  The annotation report (annotations.md) contains:
+    - Intro: "I have annotated the following code."
+    - Format legend and type / scope definitions
+    - `## Annotations` section:
+        [GENERAL] [TYPE] (no location) >> <text>
+        [FILE]    [TYPE] <file> >> <text>
+        [LINE]    [TYPE] <file>:<line> >> <text>
+          followed by a code context block (±2 lines) with a `>` marker
+    - "_No annotations._" if there are none
+
+  The report is also yanked to the `+` and `"` registers.
+
+Differences from diff review~
+  - No special UI tab or file list — works in your normal editing session.
+  - Anchored to real file line numbers, not diff new_ln.
+  - Persisted in annotations.json (separate from session.json).
+  - Report intro says "I have annotated the following code." instead of
+    "I have reviewed your changes."
+  - Files are listed alphabetically, not in diff order.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:
