@@ -43,28 +43,40 @@ function M.setup(opts)
     end
 
     -- ── diff review flow ───────────────────────────────────────────────────
-    if arg == "" or arg == "diff=HEAD" then
-      M.open({})
-    elseif arg == "diff=staged" then
-      M.open({ staged = true })
-    elseif arg:match("^diff=(.+)$") then
-      local ref = arg:match("^diff=(.+)$")
-      M.open({ ref = ref })
-    elseif arg == "view=unified" then
-      M.open({ view_mode = "unified" })
-    elseif arg == "view=split" then
-      M.open({ view_mode = "split" })
-    elseif arg == "list" then
+    if arg == "list" then
       require("ceibo.ui.comment_list").open()
     else
-      vim.notify(
-        "ceibo: unknown argument '"
-          .. arg
-          .. "'\n"
-          .. "Usage: :Ceibo [diff=<ref>|diff=staged|view=unified|view=split|list]\n"
-          .. "       :Ceibo annotate [comment|delete|list|report]",
-        vim.log.levels.ERROR
-      )
+      local tokens = vim.split(arg, "%s+", { trimempty = true })
+      local open_opts = {}
+      local unknown = {}
+
+      for _, token in ipairs(tokens) do
+        if token == "diff=HEAD" or token == "" then
+          -- default, no-op
+        elseif token == "diff=staged" then
+          open_opts.staged = true
+        elseif token:match("^diff=(.+)$") then
+          open_opts.ref = token:match("^diff=(.+)$")
+        elseif token == "view=unified" then
+          open_opts.view_mode = "unified"
+        elseif token == "view=split" then
+          open_opts.view_mode = "split"
+        else
+          table.insert(unknown, token)
+        end
+      end
+
+      if #unknown > 0 then
+        vim.notify(
+          "ceibo: unknown argument(s): " .. table.concat(unknown, ", ") .. "\n"
+            .. "Usage: :Ceibo [diff=<ref>|diff=staged] [view=unified|view=split]\n"
+            .. "       :Ceibo list\n"
+            .. "       :Ceibo annotate [comment|delete|list|report]",
+          vim.log.levels.ERROR
+        )
+      else
+        M.open(open_opts)
+      end
     end
   end, {
     nargs = "*",
