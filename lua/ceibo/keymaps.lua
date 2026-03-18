@@ -281,13 +281,27 @@ function M.attach_diff(diff_bufnr, diff_win, fl_bufnr, fl_win)
 
   -- close
   nmap(diff_bufnr, km.close, function()
-    vim.cmd("tabclose")
+    require("ceibo.ui.layout").close()
   end, "Close review tab")
 
   -- help
   nmap(diff_bufnr, "?", function()
     M.show_help()
   end, "Show help")
+end
+
+function M.attach_split(old_bufnr, new_bufnr)
+  local cfg = require("ceibo.config").options
+  if not cfg.set_default_keymaps then
+    return
+  end
+
+  local km = cfg.keymaps
+  for _, bufnr in ipairs({ old_bufnr, new_bufnr }) do
+    nmap(bufnr, km.close, function()
+      require("ceibo.ui.layout").close()
+    end, "Close review tab")
+  end
 end
 
 function M.attach_file_list(fl_bufnr, fl_win)
@@ -341,7 +355,7 @@ function M.attach_file_list(fl_bufnr, fl_win)
   end, "Open file in new tab")
 
   nmap(fl_bufnr, "q", function()
-    vim.cmd("tabclose")
+    require("ceibo.ui.layout").close()
   end, "Close")
 end
 

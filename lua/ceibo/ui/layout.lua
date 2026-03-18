@@ -151,6 +151,8 @@ function M.open_split(diff_win)
   session.split_old_bufnr = old_buf
   session.split_new_bufnr = new_buf
 
+  require("ceibo.keymaps").attach_split(old_buf, new_buf)
+
   -- Replace the unified diff window content with the old buffer, then vsplit for new
   vim.api.nvim_set_current_win(diff_win)
   vim.api.nvim_win_set_buf(diff_win, old_buf)
@@ -209,6 +211,30 @@ function M.close_split()
   session.split_new_win = nil
   session.split_old_bufnr = nil
   session.split_new_bufnr = nil
+end
+
+-- Close all ceibo buffers and the review tab.
+function M.close()
+  local session = require("ceibo.session")
+  local statusbar = require("ceibo.ui.statusbar")
+
+  local bufs = {
+    session.bufnr,
+    session.file_list_bufnr,
+    session.split_old_bufnr,
+    session.split_new_bufnr,
+  }
+
+  statusbar.close()
+
+  -- tabclose first so windows are gone before we wipe buffers
+  vim.cmd("tabclose")
+
+  for _, buf in ipairs(bufs) do
+    if buf and vim.api.nvim_buf_is_valid(buf) then
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end
+  end
 end
 
 -- Find the current diff_win by looking for the buffer named "ceibo://review".
