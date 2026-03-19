@@ -158,3 +158,10 @@ Annotations are auto-saved to `annotations.json` in the same directory and rende
 
 ceibo.nvim is heavily inspired by [tuicr](https://github.com/agavra/tuicr) by [@agavra](https://github.com/agavra) — a terminal UI for the same AI-assisted code review workflow. Most features and behaviour here replicate what tuicr implemented in the first place. If you are not tied to Neovim, try tuicr first: it is more polished and has more features.
 
+## Screenshots
+
+![Diff view](./assets/image_1.png)
+
+![Comment prompt](./assets/image_2.png)
+
+![Help menu](./assets/image_3.png)
